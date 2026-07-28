@@ -1,0 +1,21 @@
+# Root
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Workers
+workers/node_modules/
+workers/.wrangler/
+workers/dist/
+
+# Flutter (also covered by mobile/.gitignore)
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins-dependencies
