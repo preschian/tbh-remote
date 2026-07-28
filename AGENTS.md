@@ -2,29 +2,25 @@
 
 ## Scope
 
-- This repo is the **cloud relay + mobile app** for TBH Companion remote monitor.
-- Do **not** put Windows companion / BepInEx plugin code here; that stays in
-  `tbh-presence`.
-- Keep changes focused. Prefer small, reviewable increments along the roadmap
-  in `docs/roadmap.md`.
+- Cloud relay + mobile app for TBH Companion remote monitor.
+- Windows companion / BepInEx stay in `tbh-presence`.
+- v1 transport is **Workers + D1 HTTP polling** — do not reintroduce Durable
+  Objects unless product needs true push/WebSockets.
 
 ## Stack
 
-- **workers/** — Cloudflare Workers + Durable Objects + D1 + KV (TypeScript).
-- **mobile/** — Flutter (iOS/Android). Subscription via RevenueCat
-  (`purchases_flutter`) when wired.
-- Auth v1: pairing codes only. Subscription gates pair + live WS.
+- `workers/` — Cloudflare Workers + D1 (TypeScript)
+- `mobile/` — Flutter; RevenueCat later
+- Auth: pairing codes; subscription gates pair + remote APIs
 
 ## Conventions
 
-- Conventional Commits: `feat|fix|docs|refactor|test|build|ci|chore`.
-- Document API / event changes in `docs/api.md` when contracts change.
-- Gate paid features on the **server** (Worker), never only on the client.
-- Do not store game saves or memory dumps — status snapshots only.
+- Conventional Commits
+- Update `docs/api.md` when routes change
+- Gate paid features on the server
+- No game saves / memory dumps in the relay
 
 ## Verify
 
-- Workers: `cd workers && npm test` and `npm run dev` for local smoke.
-- Mobile: `cd mobile && flutter analyze` and `flutter test`.
-- Full deploy/IAP verification needs Cloudflare + store credentials; say so if
-  those are unavailable in the current environment.
+- `cd workers && npm test && npx tsc --noEmit`
+- `cd mobile && flutter analyze && flutter test`

@@ -46,6 +46,29 @@ class RemoteApi {
     await _delete('/v1/devices/$deviceId', token: accountToken);
   }
 
+  Future<Map<String, dynamic>> getStatus({
+    required String token,
+    required String deviceId,
+  }) async {
+    return _get('/v1/devices/$deviceId/status', token: token);
+  }
+
+  Future<Map<String, dynamic>> enqueueCommand({
+    required String token,
+    required String deviceId,
+    required String name,
+    Map<String, dynamic>? args,
+  }) async {
+    return _post(
+      '/v1/devices/$deviceId/commands',
+      token: token,
+      body: {
+        'name': name,
+        'args': ?args,
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> _get(String path, {String? token}) async {
     final res = await _client.get(
       Uri.parse('$_base$path'),

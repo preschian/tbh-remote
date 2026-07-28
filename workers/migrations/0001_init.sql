@@ -1,4 +1,4 @@
--- D1 schema for TBH Remote relay (v1)
+-- D1 schema for TBH Remote relay (v1, no Durable Objects)
 
 CREATE TABLE IF NOT EXISTS accounts (
   id TEXT PRIMARY KEY,
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS devices (
   name TEXT,
   paired_at TEXT,
   last_seen_at TEXT,
+  desired_settings TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -39,3 +40,33 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_device_tokens_device ON device_tokens(device_id);
+
+CREATE TABLE IF NOT EXISTS pairing_codes (
+  code TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pairing_expires ON pairing_codes(expires_at);
+
+CREATE TABLE IF NOT EXISTS device_status (
+  device_id TEXT PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS device_commands (
+  id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  args TEXT,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  acked_at TEXT,
+  ack_ok INTEGER,
+  ack_error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_commands_pending
+  ON device_commands(device_id, expires_at)
+  WHERE acked_at IS NULL;

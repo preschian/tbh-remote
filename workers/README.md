@@ -1,28 +1,29 @@
 # TBH Remote — Cloudflare Worker
 
-Relay for pairing, live status, commands, and RevenueCat webhooks.
+Stateless Worker + **D1** relay (no Durable Objects).
+
+PC and mobile exchange status/commands over HTTP; clients poll every few seconds.
 
 ## Setup
 
-1. Create D1 + KV in the Cloudflare dashboard (or `wrangler d1 create` / `wrangler kv namespace create`).
-2. Replace placeholder ids in `wrangler.jsonc`.
-3. `npm install`
-4. `npm run db:migrate:local`
-5. `npm run dev`
+1. `npx wrangler d1 create tbh-remote` and paste the id into `wrangler.jsonc`
+2. `npm install`
+3. `npm run db:migrate:local`
+4. `npm run dev`
 
-Optional secret:
+Optional:
 
 ```bash
-echo -n "your-secret" | wrangler secret put REVENUECAT_WEBHOOK_SECRET
+echo -n "your-secret" | npx wrangler secret put REVENUECAT_WEBHOOK_SECRET
 ```
 
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `npm run dev` | Local Worker + DO |
+| `npm run dev` | Local Worker + D1 |
 | `npm run deploy` | Deploy |
 | `npm test` | Vitest |
-| `npm run cf-typegen` | Regenerate `Env` types from wrangler |
+| `npm run cf-typegen` | Regenerate types |
 
-See `../docs/api.md` for the HTTP/WS contract.
+See `../docs/api.md`.

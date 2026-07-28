@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../services/api.dart';
-import '../services/live_socket.dart';
 import '../services/session.dart';
 
 class StatusScreen extends StatefulWidget {
@@ -23,51 +24,83 @@ class StatusScreen extends StatefulWidget {
 }
 
 class _StatusScreenState extends State<StatusScreen> {
-  final _socket = LiveSocket();
+  Timer? _timer;
   Map<String, dynamic>? _status;
   bool _pcOnline = false;
   String? _connection;
   String? _deviceName;
+  String? _deviceId;
+  String? _token;
+  bool _sending = false;
 
   @override
   void initState() {
     super.initState();
-    _connect();
+    _start();
   }
 
-  Future<void> _connect() async {
-    final deviceId = await widget.session.deviceId();
-    final token = await widget.session.mobileToken();
+  Future<void> _start() async {
+    _deviceId = await widget.session.deviceId();
+    _token = await widget.session.mobileToken();
     _deviceName = await widget.session.deviceName();
-    if (deviceId == null || token == null) {
+    if (_deviceId == null || _token == null) {
       widget.onUnpaired();
       return;
     }
-    setState(() => _connection = 'connecting…');
-    _socket.onMessage = _onMessage;
-    _socket.onError = (e) {
-      if (mounted) setState(() => _connection = 'error: $e');
-    };
-    _socket.onDone = () {
-      if (mounted) setState(() => _connection = 'disconnected');
-    };
+    setState(() => _connection = 'polling…');
+    await _tick();
+    _timer = Timer.periodic(AppConfig.statusPollInterval, (_) => _tick());
+  }
+
+  Future<void> _tick() async {
+    final deviceId = _deviceId;
+    final token = _token;
+    if (deviceId == null || token == null) return;
     try {
-      await _socket.connect(deviceId: deviceId, mobileToken: token);
-      if (mounted) setState(() => _connection = 'live');
+      final res = await widget.api.getStatus(token: token, deviceId: deviceId);
+      if (!mounted) return;
+      setState(() {
+        _pcOnline = res['pcOnline'] == true;
+        final status = res['status'];
+        _status = status is Map<String, dynamic>
+            ? status
+            : status is Map
+                ? Map<String, dynamic>.from(status)
+                : null;
+        _connection = 'ok · ${res['updatedAt'] ?? 'no status yet'}';
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _connection = '${e.statusCode}: ${e.message}');
     } catch (e) {
-      if (mounted) setState(() => _connection = 'failed: $e');
+      if (!mounted) return;
+      setState(() => _connection = 'error: $e');
     }
   }
 
-  void _onMessage(Map<String, dynamic> msg) {
-    final type = msg['type'];
-    setState(() {
-      if (type == 'status') {
-        _status = msg;
-      } else if (type == 'presence') {
-        _pcOnline = msg['online'] == true;
-      }
-    });
+  Future<void> _command(String name) async {
+    final deviceId = _deviceId;
+    final token = _token;
+    if (deviceId == null || token == null || _sending) return;
+    setState(() => _sending = true);
+    try {
+      await widget.api.enqueueCommand(
+        token: token,
+        deviceId: deviceId,
+        name: name,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Queued $name')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   Future<void> _unpair() async {
@@ -80,14 +113,14 @@ class _StatusScreenState extends State<StatusScreen> {
         /* still clear local */
       }
     }
-    await _socket.disconnect();
+    _timer?.cancel();
     await widget.session.clearPairing();
     widget.onUnpaired();
   }
 
   @override
   void dispose() {
-    _socket.disconnect();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -96,11 +129,17 @@ class _StatusScreenState extends State<StatusScreen> {
     final stage = _status?['stage'];
     final label = stage is Map ? stage['label']?.toString() : null;
     final auto = _status?['autoLoop'];
+    final canCommand = !_sending && _token != null;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_deviceName ?? 'TBH Remote'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh now',
+            onPressed: _tick,
+            icon: const Icon(Icons.refresh),
+          ),
           IconButton(
             tooltip: 'Unpair',
             onPressed: _unpair,
@@ -137,21 +176,15 @@ class _StatusScreenState extends State<StatusScreen> {
             runSpacing: 8,
             children: [
               FilledButton.tonal(
-                onPressed: _socket.isConnected
-                    ? () => _socket.sendCommand('pause_loop')
-                    : null,
+                onPressed: canCommand ? () => _command('pause_loop') : null,
                 child: const Text('Pause loop'),
               ),
               FilledButton.tonal(
-                onPressed: _socket.isConnected
-                    ? () => _socket.sendCommand('resume_loop')
-                    : null,
+                onPressed: canCommand ? () => _command('resume_loop') : null,
                 child: const Text('Resume'),
               ),
               FilledButton.tonal(
-                onPressed: _socket.isConnected
-                    ? () => _socket.sendCommand('run_now')
-                    : null,
+                onPressed: canCommand ? () => _command('run_now') : null,
                 child: const Text('Run now'),
               ),
             ],
@@ -160,7 +193,9 @@ class _StatusScreenState extends State<StatusScreen> {
           Text('Raw status', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
           SelectableText(
-            _status == null ? '—' : const JsonEncoder.withIndent('  ').convert(_status),
+            _status == null
+                ? '—'
+                : const JsonEncoder.withIndent('  ').convert(_status),
             style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
           ),
         ],

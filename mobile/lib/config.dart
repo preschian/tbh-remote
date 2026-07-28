@@ -6,9 +6,5 @@ class AppConfig {
     defaultValue: 'http://127.0.0.1:8787',
   );
 
-  static String get wsBaseUrl {
-    final uri = Uri.parse(apiBaseUrl);
-    final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
-    return uri.replace(scheme: scheme).toString().replaceAll(RegExp(r'/$'), '');
-  }
+  static const statusPollInterval = Duration(seconds: 3);
 }

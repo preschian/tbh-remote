@@ -1,41 +1,39 @@
 # Roadmap
 
-## Phase 0 — Repo + contracts (current)
+## Phase 0 — Repo + contracts
 
-- [x] Separate repo with docs (architecture, API, roadmap)
-- [x] Workers scaffold (routes + DeviceRoom stub + D1 schema)
-- [x] Flutter scaffold (pair / status / paywall placeholders)
-- [ ] Wire companion cloud client in `tbh-presence` (separate PR later)
+- [x] Separate repo with docs
+- [x] Workers scaffold on **Workers + D1** (no Durable Objects)
+- [x] Flutter scaffold (pair / status / paywall)
+- [ ] Wire companion HTTP client in `tbh-presence`
 
 ## Phase 1 — Pairing + status (MVP)
 
-- [ ] D1 migrations live; KV pairing codes with TTL
+- [ ] Real D1 database ids + deploy
 - [ ] `pair/start` + `pair/claim` end-to-end
-- [ ] DeviceRoom WSS: PC pushes `status`, mobile displays
-- [ ] Mobile: bootstrap account, enter code, live status screen
+- [ ] PC PUT status / mobile GET status polling
+- [ ] Mobile live status screen
 
 ## Phase 2 — Subscription
 
-- [ ] RevenueCat products + `purchases_flutter`
-- [ ] Webhook → D1 subscription status
-- [ ] Server gate on claim + mobile WS (`402`)
-- [ ] Paywall screen; restore purchases
+- [ ] RevenueCat + `purchases_flutter`
+- [ ] Webhook → D1 + server gates
+- [ ] Paywall + restore
 
 ## Phase 3 — Control
 
-- [ ] `settings.set` + PC apply/ack
-- [ ] Commands: pause / resume / run_now (+ ack + TTL)
-- [ ] Online/offline presence on mobile
+- [ ] Settings PUT/GET
+- [ ] Commands + ack (pause / resume / run_now)
+- [ ] Online/offline from `last_seen_at`
 
-## Phase 4 — Harden
+## Phase 4 — Harden / optional realtime
 
-- [ ] Rate limits, revoke device, token rotation
-- [ ] Custom domain, observability, basic audit
-- [ ] Multi-device policy (v1: 1 PC per account)
-- [ ] Dangerous command confirmations
+- [ ] Rate limits, revoke, token rotation
+- [ ] Custom domain, observability
+- [ ] **Optional:** Durable Objects + WSS if polling feels too slow
 
 ## Out of scope (for now)
 
-- Full account login (Google/Apple/Discord) — pairing is enough for v1
-- Hosting game files / saves
-- Exposing companion HTTP on the public internet
+- Heavy account login
+- Hosting game saves
+- Public companion ports
